@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3D Slot Machine with Lever Auto Reset</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+        body {
+            background: #073147;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Pacifico', cursive;
+            color: #f4f0e7;
+            user-select: none;
+        }
+
+        .slot-machine {
+            background: #e56c66;
+            border-radius: 2rem 2rem 1rem 1rem;
+            box-shadow: 0 5px 0 #bb504f, 5px 10px 10px rgba(0, 0, 0, 0.4);
+            padding: 1.5rem 2.5rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .slot-machine::before {
+            content: 'Slot Machine';
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.8rem;
+            color: #f4f0e7;
+            text-shadow: 2px 2px 4px #001f2f;
+            font-weight: 700;
+        }
+
+        .slot-window {
+            background: #f4f0e7;
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 4px #bbb, 0 0 0 5px #073147;
+            display: flex;
+            gap: 0.6rem;
+            padding: 0.5rem 0.8rem;
+        }
+
+        .digit {
+            background: #f4f0e7;
+            color: #073147;
+            width: 100px;
+            height: 120px;
+            border: 3px solid black;
+            border-radius: 1rem;
+            font-size: 6rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 600px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .digit-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-size: 6rem;
+            font-weight: 900;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s ease-in-out;
+        }
+
+        .digit.spinning .digit-inner {
+            animation: spin3d 0.7s infinite linear;
+        }
+
+        @keyframes spin3d {
+            0% {
+                transform: rotateX(0deg) translateZ(30px);
+            }
+
+            100% {
+                transform: rotateX(360deg) translateZ(30px);
+            }
+        }
+
+        /* 拉桿樣式 */
+        #lever {
+            width: 100px;
+            height: 200px;
+            position: relative;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-30px);
+        }
+
+        /* 桿子 */
+        .lever-rod {
+            position: absolute;
+            top: 70px;
+            left: 40px;
+            width: 20px;
+            height: 100px;
+            border: 5px solid #09384e;
+            border-radius: 20px;
+            background-color: #ea5e56;
+            transition: 0.35s;
+        }
+
+        /* 橫向桿子 */
+        .lever-rod2 {
+            position: absolute;
+            top: 165px;
+            left: 40px;
+            width: 80px;
+            height: 20px;
+            border: 5px solid #09384e;
+            border-radius: 0 20px 20px 0;
+            background-color: #ea5e56;
+        }
+
+        /* 桿頭 */
+        .lever-handle {
+            position: absolute;
+            top: 0;
+            left: 15px;
+            width: 70px;
+            height: 70px;
+            border: 5px solid #09384e;
+            border-radius: 50%;
+            background-color: #ea5e56;
+            cursor: pointer;
+            transition: 0.5s;
+            animation: ballLight 1s infinite alternate-reverse linear;
+        }
+
+        #lever.active {
+            cursor: grabbing;
+            transform: translateY(10px);
+        }
+
+        #lever.active .lever-rod,
+        #lever.active .lever-handle {
+            background-color: #bb504f;
+            box-shadow: 0 0 6px rgba(187, 80, 79, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        #lever.active .lever-handle {
+            box-shadow: 0 0 18px #f4f0e7, inset 0 0 18px #7a1d1c;
+        }
+
+        button {
+            margin-top: 2rem;
+            padding: 0.8rem 2rem;
+            font-family: 'Pacifico', cursive;
+            font-size: 1.6rem;
+            background: #e56c66;
+            border: 3px solid #073147;
+            color: #f4f0e7;
+            border-radius: 1.2rem;
+            box-shadow: 0 4px 0 #bb504f;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        button:active {
+            box-shadow: none;
+            transform: translateY(4px);
+        }
+
+        button:disabled {
+            background: #bb504f;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #message {
+            margin-top: 1rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #f4f0e7;
+            text-shadow: 1px 1px 2px #001f2f;
+            min-height: 2.5rem;
+            text-align: center;
+            user-select: text;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="slot-machine" aria-label="Slot Machine">
+        <div class="slot-window" role="list" aria-live="polite" aria-atomic="true">
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+            <div class="digit">
+                <div class="digit-inner">0</div>
+            </div>
+        </div>
+        <div id="lever" role="button" title="拉動拉桿抽獎" tabindex="0" aria-pressed="false">
+            <div class="lever-rod"></div>
+            <div class="lever-rod2"></div>
+            <div class="lever-handle"></div>
+        </div>
+    </div>
+
+    <button id="btn-spin">Play</button>
+    <div id="message" aria-live="polite">按「Play」或拉桿開始抽獎</div>
+
+    <script>
+        const digits = document.querySelectorAll('.digit');
+        const lever = document.getElementById('lever');
+        const btnSpin = document.getElementById('btn-spin');
+        const message = document.getElementById('message');
+
+        let spinning = false;
+        let spinIntervals = [];
+
+        function generateUniqueNumbers(count, max) {
+            const set = new Set();
+            while (set.size < count) {
+                const num = Math.floor(Math.random() * max) + 1;
+                set.add(num);
+            }
+            return Array.from(set).sort((a, b) => a - b);
+        }
+
+        function startSpinning() {
+            digits.forEach((digit, i) => {
+                digit.classList.add('spinning');
+                spinIntervals[i] = setInterval(() => {
+                    const randomNum = Math.floor(Math.random() * 49) + 1;
+                    digit.querySelector('.digit-inner').textContent = randomNum;
+                }, 80 + i * 40);
+            });
+        }
+
+        function stopSpinning(results) {
+            digits.forEach((digit, i) => {
+                clearInterval(spinIntervals[i]);
+                digit.classList.remove('spinning');
+                digit.querySelector('.digit-inner').style.transform = 'rotateX(360deg)';
+                setTimeout(() => {
+                    digit.querySelector('.digit-inner').style.transition = 'transform 0.3s ease-out';
+                    digit.querySelector('.digit-inner').style.transform = 'rotateX(0deg)';
+                    digit.querySelector('.digit-inner').textContent = results[i];
+                }, 300);
+            });
+        }
+
+        function resetDigits() {
+            digits.forEach(digit => {
+                digit.querySelector('.digit-inner').style.transition = '';
+                digit.querySelector('.digit-inner').style.transform = 'rotateX(0deg)';
+                digit.querySelector('.digit-inner').textContent = '0';
+                digit.classList.remove('spinning');
+            });
+        }
+
+        function spin() {
+            if (spinning) return;
+            spinning = true;
+            message.textContent = '抽獎中... 🎰';
+            btnSpin.disabled = true;
+
+            startSpinning();
+
+            setTimeout(() => {
+                const results = generateUniqueNumbers(digits.length, 49);
+                stopSpinning(results);
+                message.textContent = '中獎號碼：' + results.join(', ');
+                btnSpin.disabled = false;
+                spinning = false;
+            }, 2000);
+        }
+
+        btnSpin.addEventListener('click', spin);
+
+        lever.addEventListener('click', () => {
+            if (!spinning) spin();
+        });
+
+        lever.addEventListener('keydown', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && !spinning) {
+                e.preventDefault();
+                spin();
+            }
+        });
+
+        let isDragging = false;
+        let startY = 0;
+        let hasTriggered = false;
+
+        lever.addEventListener('mousedown', e => {
+            if (spinning) return;
+            isDragging = true;
+            hasTriggered = false;
+            startY = e.clientY;
+            lever.classList.add('active');
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const deltaY = e.clientY - startY;
+            if (deltaY > 40 && !hasTriggered) {
+                hasTriggered = true;
+                spin();
+                setTimeout(() => {
+                    lever.classList.remove('active');
+                    isDragging = false;
+                }, 300);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            lever.classList.remove('active');
+        });
+
+        resetDigits();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3D Slot Machine Cube Style</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+        body {
+            background: #073147;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Pacifico', cursive;
+            color: #f4f0e7;
+            user-select: none;
+        }
+
+        .slot-machine {
+            background: #e56c66;
+            border-radius: 2rem 2rem 1rem 1rem;
+            box-shadow: 0 5px 0 #bb504f, 5px 10px 10px rgba(0, 0, 0, 0.4);
+            padding: 1.5rem 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .slot-window {
+            background: #f4f0e7;
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 4px #bbb, 0 0 0 5px #073147;
+            display: flex;
+            gap: 0.6rem;
+            padding: 0.5rem 0.8rem;
+        }
+
+        .digit {
+            width: 100px;
+            height: 120px;
+            perspective: 1000px;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s ease-in-out;
+        }
+
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            color: #073147;
+            font-size: 4rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #000;
+            border-radius: 10px;
+            user-select: none;
+            backface-visibility: hidden;
+        }
+
+        .face:nth-child(1) {
+            transform: rotateX(0deg) translateZ(60px);
+        }
+
+        .face:nth-child(2) {
+            transform: rotateX(90deg) translateZ(60px);
+        }
+
+        .face:nth-child(3) {
+            transform: rotateX(180deg) translateZ(60px);
+        }
+
+        .face:nth-child(4) {
+            transform: rotateX(-90deg) translateZ(60px);
+        }
+
+        .face:nth-child(5) {
+            transform: rotateY(90deg) translateZ(60px);
+        }
+
+        .face:nth-child(6) {
+            transform: rotateY(-90deg) translateZ(60px);
+        }
+
+        .lever {
+            margin-left: 1.5rem;
+            width: 30px;
+            height: 120px;
+            background: #e56c66;
+            border-radius: 0.6rem;
+            position: relative;
+            box-shadow: 0 3px 0 #bb504f, inset 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .lever::after {
+            content: '';
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e56c66;
+            box-shadow: 0 0 8px #f4f0e7, inset 0 0 15px #bb504f;
+        }
+
+        .lever:active {
+            background: #bb504f;
+        }
+
+        .lever:active::after {
+            background: #bb504f;
+        }
+
+        button {
+            margin-top: 2rem;
+            padding: 0.8rem 2rem;
+            font-family: 'Pacifico', cursive;
+            font-size: 1.6rem;
+            background: #e56c66;
+            border: 3px solid #073147;
+            color: #f4f0e7;
+            border-radius: 1.2rem;
+            box-shadow: 0 4px 0 #bb504f;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        button:disabled {
+            background: #bb504f;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 1rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #f4f0e7;
+            text-shadow: 1px 1px 2px #001f2f;
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="slot-machine" aria-label="Slot Machine">
+        <div class="slot-window" role="list" aria-live="polite" aria-atomic="true">
+            <div class="digit" aria-label="Digit 1">
+                <div class="cube"></div>
+            </div>
+            <div class="digit" aria-label="Digit 2">
+                <div class="cube"></div>
+            </div>
+            <div class="digit" aria-label="Digit 3">
+                <div class="cube"></div>
+            </div>
+            <div class="digit" aria-label="Digit 4">
+                <div class="cube"></div>
+            </div>
+            <div class="digit" aria-label="Digit 5">
+                <div class="cube"></div>
+            </div>
+            <div class="digit" aria-label="Digit 6">
+                <div class="cube"></div>
+            </div>
+        </div>
+        <div class="lever" title="拉動拉桿抽獎" role="button" tabindex="0" aria-pressed="false" aria-label="拉動拉桿抽獎"></div>
+    </div>
+    <button id="btn-spin">Play</button>
+    <div id="message" aria-live="polite">按「Play」或拉桿開始抽獎</div>
+
+    <script>
+        const digits = document.querySelectorAll('.digit');
+        const btnSpin = document.getElementById('btn-spin');
+        const lever = document.querySelector('.lever');
+        const message = document.getElementById('message');
+
+        // 建立六個面，依序顯示 value 開始的六個號碼（1~49循環）
+        function createFaces(cube, value) {
+            cube.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const face = document.createElement('div');
+                face.className = 'face';
+                let num = (value + i) % 50;
+                if (num === 0) num = 1;
+                face.textContent = num;
+                cube.appendChild(face);
+            }
+        }
+
+        // 產生不重複亂數號碼(1~49)
+        function generateUniqueNumbers(count, min = 1, max = 49) {
+            const set = new Set();
+            while (set.size < count) {
+                set.add(Math.floor(Math.random() * (max - min + 1)) + min);
+            }
+            return Array.from(set);
+        }
+
+        // 先轉回「1」號面（rotateX 0deg）
+        function resetToOne() {
+            return new Promise((resolve) => {
+                digits.forEach(digit => {
+                    const cube = digit.querySelector('.cube');
+                    cube.style.transition = 'transform 1s ease-in-out';
+                    cube.style.transform = 'rotateX(0deg)';
+                    cube.dataset.rotateX = 0;
+                    createFaces(cube, 1); // 顯示1~6面，固定從1開始
+                });
+                setTimeout(() => resolve(), 10); // 等1秒動畫結束
+            });
+        }
+
+        async function spin() {
+            if (btnSpin.disabled) return; // 避免重複觸發
+            message.textContent = '抽獎中... 🎰';
+            btnSpin.disabled = true;
+
+            // 第一步：先全部轉回「1」面
+            await resetToOne();
+
+            // 第二步：產生隨機號碼並排序
+            const results = generateUniqueNumbers(6);
+            const resultsSorted = results.slice().sort((a, b) => a - b);
+
+            digits.forEach((digit, i) => {
+                const cube = digit.querySelector('.cube');
+                const value = resultsSorted[i];
+                createFaces(cube, value);
+
+                const prevRotateX = parseInt(cube.dataset.rotateX) || 0;
+
+                // 找目標號碼在六面的位置index (0~5)
+                // 六面號碼是 value, value+1, ..., value+5 (1~49循環)
+                let index = 0;
+                for (let j = 0; j < 6; j++) {
+                    let num = (value + j) % 50;
+                    if (num === 0) num = 1;
+                    if (num === resultsSorted[i]) {
+                        index = j;
+                        break;
+                    }
+                }
+
+                // 設定旋轉圈數 (3~5圈) 並加上對應面角度 (每面60度)
+                const spins = 3 + Math.floor(Math.random() * 3);
+                const rotateX = prevRotateX + spins * 360 + index * 60;
+
+                cube.dataset.rotateX = rotateX;
+
+                setTimeout(() => {
+                    cube.style.transition = 'transform 1s ease-in-out';
+                    cube.style.transform = `rotateX(${rotateX}deg)`;
+                }, i * 250);
+            });
+
+            // 動畫結束後顯示結果並解鎖按鈕
+            setTimeout(() => {
+                message.textContent = '中獎號碼：' + resultsSorted.join(', ');
+                btnSpin.disabled = false;
+            }, digits.length * 250 + 1200);
+        }
+
+        btnSpin.addEventListener('click', spin);
+        lever.addEventListener('click', spin);
+        lever.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                spin();
+            }
+        });
+
+        // 預設初始化：所有方塊轉到「1」面且顯示1~6
+        digits.forEach(digit => {
+            const cube = digit.querySelector('.cube');
+            createFaces(cube, 1);
+            cube.dataset.rotateX = '0';
+            cube.style.transform = 'rotateX(0deg)';
+        });
+    </script>
+</body>
+
+</html>
